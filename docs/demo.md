@@ -37,7 +37,7 @@ A captured run is in [media/demo-offline.txt](media/demo-offline.txt). The tool 
 
 Merge `examples/hermes/config.example.yaml` into a Hermes profile that points at the demo database, and ask the same questions from the CLI.
 
-Record this demo instead of running it live: a free model had multi-minute stream stalls during real use. Use a model that follows the tool-calling protocol reliably, and say which one you used.
+Record this demo instead of running it live: in real use, one cron run with a low-cost model hit a 766-second inactivity timeout. Use a model that follows the tool-calling protocol reliably, and say which one you used.
 
 For the cron example, use a bot and a chat created only for the demo.
 

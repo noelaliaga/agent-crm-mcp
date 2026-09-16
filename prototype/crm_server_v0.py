@@ -2,7 +2,8 @@
 # PROTOTYPE, kept for provenance. Do not run against a real database.
 #
 # This is the MCP server as it was used with Hermes Agent in August 2026, copied from
-# the original single file. The ONLY edits are marked "[sanitized]": the original read
+# the original single file. The ONLY edits are marked "[sanitized]" or are explanatory
+# comments pointing to docs/ (such as the service_role note). The original read
 # credentials from other projects' dotfiles (paths removed) and used the Supabase
 # service_role key. Everything else, including its known weaknesses, is unchanged.
 # The maintained version is servers/crm/server.py; docs/decisions.md explains what

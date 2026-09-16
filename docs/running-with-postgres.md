@@ -4,7 +4,8 @@ The unit tests and the demo use a fake PostgREST. The guarantees that only a dat
 - column grants;
 - no DELETE;
 - the audit trigger with role and actor;
-- the note author set by the database.
+- the note author set by the database;
+- audit rows about `valor_cents` hidden from the agent.
 
 Those tests run in the CI `integration` job (`.github/workflows/ci.yml`).
 
@@ -38,7 +39,9 @@ psql "$CRM_IT_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/seed.sql
 # PostgREST with PGRST_DB_ANON_ROLE=anon and a JWT secret of at least 32 characters
 export CRM_IT_JWT_SECRET=<same secret as PostgREST>
 export CRM_IT_POSTGREST_URL=http://localhost:3000
-python -m pytest -m integration -v
+export CRM_IT_REQUIRED=1        # fail instead of skipping a module whose backend is missing
+python -m pytest -m integration -v -rs
+# The server itself needs CRM_REST_PATH=/ against plain PostgREST (no /rest/v1 prefix).
 ```
 
 `bootstrap_plain_postgres.sql` creates the `authenticator` and `anon` roles, which Supabase already provides, using a password meant only for the throwaway CI database. Use your own password anywhere else.

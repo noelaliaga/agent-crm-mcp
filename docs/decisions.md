@@ -11,7 +11,7 @@ Each decision gives the context, the choice, and what it costs. The prototype re
 **Why.**
 - There is nothing to install next to the runtime: `python3 server.py` is the whole deployment.
 - The protocol is visible in about 60 lines (`CrmServer.handle`).
-- A failure cannot be blamed on an SDK version mismatch between server and client. That mattered in the incident: see [postmortem-mcp-parked.md](postmortem-mcp-parked.md).
+- The server has no SDK of its own that could drift from the client's. This did not prevent the outage in [postmortem-mcp-parked.md](postmortem-mcp-parked.md), whose cause was in the runtime, but it kept the list of suspects short.
 
 **Cost.**
 - No HTTP transport, resources, prompts or progress notifications.
@@ -59,7 +59,7 @@ The note author is set by a trigger (`agente:<actor>`), so the agent cannot clai
 
 The server never picks "the most likely" match.
 
-**Cost.** The agent sometimes needs a second turn. In the prototype's real use, 2 of 3 note attempts failed this way or on errors, and none wrote to the wrong record.
+**Cost.** The agent sometimes needs a second turn. In the prototype's real use, 2 of 3 note attempts returned errors and 1 note was written; the logs kept do not say which rule caused each error.
 
 ## 5. No deletes
 
@@ -100,7 +100,7 @@ stdio keeps credentials in the operator's process environment, and there is no l
 
 ## 9. Third-party text is delimited, not trusted
 
-Website findings, proposals and notes are wrapped in `<untrusted source="...">` blocks. Nested tags are escaped, and every field is flattened to a single line with a length cap. Tool descriptions and the `initialize` instructions tell the model to treat those blocks as data.
+Website findings, proposals, notes, next steps, audit values and every multi-prospect listing are wrapped in `<untrusted source="...">` blocks, and nested `untrusted` tags are escaped in any letter case. The name and city in the heading of a single card, and names quoted in error messages, are not wrapped. Every field is flattened to a single line with a length cap. Tool descriptions and the `initialize` instructions tell the model to treat those blocks as data.
 
 This **reduces** prompt-injection risk but does not remove it. The seed contains an injection attempt on purpose, and the README explains the remaining defences.
 
