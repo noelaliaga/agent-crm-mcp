@@ -1,5 +1,8 @@
+# Replace every __PLACEHOLDER__ before installing.
+
 # Functional healthcheck every 15 minutes (exit != 0 -> alert via webhook + syslog).
-*/15 * * * * CRM_ENV_FILE=$HOME/.config/agent-crm-mcp/crm.env ALERT_WEBHOOK_URL=<YOUR_ALERT_WEBHOOK_URL> /bin/bash <ABSOLUTE_PATH_TO>/agent-crm-mcp/scripts/healthcheck-alert.sh
+*/15 * * * * CRM_ENV_FILE=$HOME/.config/agent-crm-mcp/crm.env ALERT_WEBHOOK_URL=__YOUR_ALERT_WEBHOOK_URL__ /bin/bash __ABSOLUTE_PATH_TO__/agent-crm-mcp/scripts/healthcheck-alert.sh
 
 # Runtime-side check: MCP failure signatures in the agent runtime's log (every 10 minutes).
-*/10 * * * * ALERT_WEBHOOK_URL=<YOUR_ALERT_WEBHOOK_URL> /bin/bash <ABSOLUTE_PATH_TO>/agent-crm-mcp/scripts/watch-runtime-log.sh <PATH_TO_RUNTIME_LOG> 2000
+# WATCH_STATE_FILE makes each run look only at lines added since the previous one.
+*/10 * * * * WATCH_STATE_FILE=$HOME/.cache/agent-crm-mcp/watch.offset ALERT_WEBHOOK_URL=__YOUR_ALERT_WEBHOOK_URL__ /bin/bash __ABSOLUTE_PATH_TO__/agent-crm-mcp/scripts/watch-runtime-log.sh __PATH_TO_RUNTIME_LOG__ 2000

@@ -53,7 +53,7 @@ Nothing checked that function. The failures were only visible in a log that nobo
 
 1. **Functional healthcheck.** `servers/crm/server.py --healthcheck` runs the same read path the tools use against the real backend. It prints a JSON report and exits with `0` (ok), `1` (backend error) or `2` (misconfigured). `scripts/healthcheck-alert.sh` and `examples/monitoring/` run it every 15 minutes and send a webhook or syslog alert when it fails.
 2. **In-band canary.** The `crm_salud` tool, together with `examples/hermes/cron-canary.example.json`, asks the *runtime itself* to call a tool. A fresh-process healthcheck **cannot** detect a stuck session inside a long-lived runtime, which is exactly this incident. The canary can, if it is paired with a dead-man's switch that alerts when `HEALTH_OK` stops arriving.
-3. **Runtime log watcher.** `scripts/watch-runtime-log.sh` alerts on the failure lines seen in this incident (`keepalive failed`, `unhandled errors in a TaskGroup`, `parked`).
+3. **Runtime log watcher.** `scripts/watch-runtime-log.sh` alerts on the failure lines seen in this incident (`keepalive failed`, `unhandled errors in a TaskGroup`, `parked`). With `WATCH_STATE_FILE` it only looks at lines added since its previous run, so old failures do not alert again after recovery.
 4. **Useful server logs.** The servers now write structured JSON lines to stderr (`startup`, `tool_call` with duration and error kind, `shutdown`), with no arguments and no PII. A parked session then shows up as silence after `startup`, not as an empty log.
 
 ## What is still open

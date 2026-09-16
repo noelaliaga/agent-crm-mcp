@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   launchd agent: run the functional healthcheck every 15 minutes and alert on failure.
-  1. Replace <ABSOLUTE_PATH_TO> and <HOME>.
+  1. Replace __ABSOLUTE_PATH_TO__, __HOME__ and __YOUR_ALERT_WEBHOOK_URL__ (or delete the
+     ALERT_WEBHOOK_URL entry). Check the result with `plutil -lint`.
   2. Put CRM_* variables in a chmod 600 file and point CRM_ENV_FILE at it.
   3. cp to ~/Library/LaunchAgents/ and `launchctl load` it.
 -->
@@ -13,14 +14,14 @@
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string><ABSOLUTE_PATH_TO>/agent-crm-mcp/scripts/healthcheck-alert.sh</string>
+    <string>__ABSOLUTE_PATH_TO__/agent-crm-mcp/scripts/healthcheck-alert.sh</string>
   </array>
   <key>EnvironmentVariables</key>
   <dict>
     <key>CRM_ENV_FILE</key>
-    <string><HOME>/.config/agent-crm-mcp/crm.env</string>
+    <string>__HOME__/.config/agent-crm-mcp/crm.env</string>
     <key>ALERT_WEBHOOK_URL</key>
-    <string><YOUR_ALERT_WEBHOOK_URL></string>
+    <string>__YOUR_ALERT_WEBHOOK_URL__</string>
   </dict>
   <key>StartInterval</key>
   <integer>900</integer>

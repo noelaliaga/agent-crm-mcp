@@ -15,4 +15,6 @@ regexes = [
   '''test-agent-token(-0123456789)?''',
   '''wrong-token-abcdef-123456''',
   '''eyJhbGciOiJIUzI1NiJ9\.eyJyb2xlIjoiY3JtX2FnZW50In0\.c2lnbmF0dXJl''',
+  '''eyJhbGciOiJIUzI1NiJ9\.eyJzdWIiOiJ4In0\.c2lnbmF0dXJl''',
+  '''abc123secret''',
 ]

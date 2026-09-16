@@ -14,13 +14,23 @@ PY="${PYTHON:-python3}"
 args=(--healthcheck)
 if [[ -n "${CRM_ENV_FILE:-}" ]]; then args+=(--env-file "$CRM_ENV_FILE"); fi
 
-report="$("$PY" "$ROOT/servers/crm/server.py" "${args[@]}" 2>/dev/null)"
+errfile="$(mktemp)"
+trap 'rm -f "$errfile"' EXIT
+
+report="$("$PY" "$ROOT/servers/crm/server.py" "${args[@]}" 2>"$errfile")"
 code=$?
 if [[ "$code" == "0" ]]; then
   exit 0
 fi
 
+# The server redacts its own logs; this second pass also covers tracebacks and messages
+# printed before logging starts (for example "cannot read --env-file").
+last_err="$(grep -v '^[[:space:]]*$' "$errfile" | tail -n 1 |
+  sed -E 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*/[redacted-jwt]/g;
+          s/([Bb]earer)[[:space:]]+[^[:space:]"]+/\1 [redacted]/g' | cut -c1-300)"
+
 message="agent-crm-mcp healthcheck FAILED on $(hostname -s) (exit $code): ${report:-no output}"
+if [[ -n "$last_err" ]]; then message+=" | stderr: $last_err"; fi
 echo "$message" >&2
 logger -t agent-crm-mcp "$message" 2>/dev/null || true
 
