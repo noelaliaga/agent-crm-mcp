@@ -37,7 +37,11 @@ TARGET = "Gestoría Ejemplo Centro"
 
 def _env(tmp_path: Path, mode: str) -> dict[str, str]:
     return subprocess_env(
-        tmp_path, CRM_SUPABASE_URL=URL, CRM_REST_PATH="", CRM_AGENT_TOKEN=TOKEN, CRM_WRITE_MODE=mode
+        tmp_path,
+        CRM_SUPABASE_URL=URL,
+        CRM_REST_PATH="/",
+        CRM_AGENT_TOKEN=TOKEN,
+        CRM_WRITE_MODE=mode,
     )
 
 

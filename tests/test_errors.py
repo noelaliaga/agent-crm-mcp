@@ -2,12 +2,22 @@
 
 from __future__ import annotations
 
+import http.client
 import io
 import json
 import socket
 
-from servers.crm.server import Config, CrmServer, JsonLog, load_env_file, redact
-from tests.helpers import FIXED_TODAY, TOKEN, call
+import pytest
+
+from servers.crm.server import (
+    MAX_RESPONSE_BYTES,
+    Config,
+    CrmServer,
+    JsonLog,
+    load_env_file,
+    redact,
+)
+from tests.helpers import FIXED_TODAY, ROOT, TOKEN, call
 
 WRONG_TOKEN = "wrong-token-abcdef-123456"
 
@@ -124,3 +134,63 @@ def test_env_file_reads_only_crm_keys_and_environment_wins(tmp_path) -> None:
 def test_redact_helper() -> None:
     assert redact("key=abcdefgh", ["abcdefgh"]) == "key=[redacted]"
     assert redact("Authorization: Bearer xyz") == "Authorization: Bearer [redacted]"
+
+
+def test_rest_path_empty_means_supabase_default_and_slash_means_no_prefix(tmp_path) -> None:
+    base = {"CRM_SUPABASE_URL": "http://127.0.0.1:54321", "CRM_AGENT_TOKEN": "t"}
+    assert Config.from_env(base).rest_path == "/rest/v1"
+    assert Config.from_env({**base, "CRM_REST_PATH": ""}).rest_path == "/rest/v1"
+    assert Config.from_env({**base, "CRM_REST_PATH": "  "}).rest_path == "/rest/v1"
+    assert Config.from_env({**base, "CRM_REST_PATH": "/"}).rest_path == ""
+    assert Config.from_env({**base, "CRM_REST_PATH": "none"}).rest_path == ""
+    assert Config.from_env({**base, "CRM_REST_PATH": "api/"}).rest_path == "/api"
+    # Copying .env.example unchanged must keep the Supabase default.
+    example = load_env_file(str(ROOT / ".env.example"), {})
+    assert "CRM_REST_PATH" in example
+    assert Config.from_env({**example, **base}).rest_path == "/rest/v1"
+
+
+class _Response:
+    def __init__(self, body: bytes) -> None:
+        self.body = body
+        self.headers: dict[str, str] = {}
+
+    def __enter__(self) -> _Response:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+    def read(self, limit: int = -1) -> bytes:
+        return self.body if limit < 0 else self.body[:limit]
+
+
+def _server_with_opener(opener) -> CrmServer:
+    config = Config.from_env({"CRM_SUPABASE_URL": "http://127.0.0.1:9", "CRM_AGENT_TOKEN": TOKEN})
+    return CrmServer(config, opener=opener, today=lambda: FIXED_TODAY)
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [
+        http.client.RemoteDisconnected("Remote end closed connection without response"),
+        http.client.IncompleteRead(b"partial"),
+        ConnectionResetError(54, "Connection reset by peer"),
+    ],
+)
+def test_unwrapped_connection_errors_become_backend_errors(exc: Exception) -> None:
+    def opener(*args, **kwargs):
+        raise exc
+
+    server = _server_with_opener(opener)
+    text, is_error = call(server, "crm_hoy")
+    assert is_error and "connection to the CRM backend failed" in text
+    report = server.health()
+    assert report["ok"] is False and report["status"] == "backend_error"
+
+
+def test_oversized_response_is_refused() -> None:
+    body = b"[" + b'{"a": 1},' * (MAX_RESPONSE_BYTES // 9 + 10) + b'{"a": 1}]'
+    server = _server_with_opener(lambda *a, **k: _Response(body))
+    text, is_error = call(server, "crm_hoy")
+    assert is_error and "more than" in text

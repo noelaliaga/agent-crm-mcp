@@ -31,7 +31,9 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 # urlopen is called with URLs whose scheme is validated (http/https) at config time.
-"servers/**" = ["S310"]
+# E402/UP036: the servers check the Python version before importing anything that needs
+# 3.11, so an old interpreter gets a clear message instead of an ImportError.
+"servers/**" = ["S310", "E402", "UP036"]
 # Dev tooling: asserts are fine, the fake backend has a dummy default token, and seed.py
 # renders SQL from the repository's own JSON with quoting (no user input).
 "devtools/**" = ["S310", "S104", "S101", "S107", "S608"]

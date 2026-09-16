@@ -65,7 +65,9 @@ def test_tools_list_contract(client: StdioMcpClient) -> None:
     for tool in tools:
         assert tool["inputSchema"]["type"] == "object"
         assert tool["inputSchema"]["additionalProperties"] is False
-        assert tool["annotations"]["destructiveHint"] is False
+        # Status and next-step updates overwrite a value; notes and reads do not.
+        overwrites = tool["name"] in {"crm_actualizar_estado", "crm_programar_siguiente_paso"}
+        assert tool["annotations"]["destructiveHint"] is overwrites
         assert tool["annotations"]["readOnlyHint"] is (tool["name"] not in WRITE_TOOLS)
     write_descriptions = [t["description"] for t in tools if t["name"] in WRITE_TOOLS]
     assert all("CRM_WRITE_MODE: off" in d for d in write_descriptions)

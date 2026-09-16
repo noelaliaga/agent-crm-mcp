@@ -17,10 +17,17 @@ Authorization header.
 
 from __future__ import annotations
 
+import sys
+
+if sys.version_info < (3, 11):  # checked before any import that needs 3.11 (datetime.UTC)
+    sys.stderr.write(
+        f"agent-crm-mcp needs Python >= 3.11; this is {sys.version_info[0]}.{sys.version_info[1]}\n"
+    )
+    raise SystemExit(2)
+
 import json
 import os
 import re
-import sys
 import time
 import urllib.error
 import urllib.parse
@@ -36,6 +43,7 @@ SUPPORTED_PROTOCOL_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-1
 API_VERSION = "2021-07-28"
 DEFAULT_BASE = "https://services.leadconnectorhq.com"
 FIXTURES = Path(__file__).with_name("fixtures.json")
+_UNTRUSTED_TAG = re.compile(r"<(?=\s*/?\s*untrusted)", re.IGNORECASE)
 
 
 class ToolError(Exception):
@@ -284,7 +292,7 @@ def t_conversaciones(c: GhlClient, args: Mapping[str, Any]) -> str:
             f" · {x.get('lastMessageType') or '?'} · unread: {x.get('unreadCount', 0)}"
         )
         if x.get("lastMessageBody"):
-            body = _one_line(x["lastMessageBody"], 110).replace("</untrusted", "&lt;/untrusted")
+            body = _UNTRUSTED_TAG.sub("&lt;", _one_line(x["lastMessageBody"], 110))
             out.append(f'      <untrusted source="ghl.conversation">{body}</untrusted>')
     return "\n".join(out)
 
