@@ -11,7 +11,9 @@ emails and websites use example.com, phones use the Ofcom range reserved for dra
 
 from __future__ import annotations
 
+import argparse
 import json
+import sys
 from collections.abc import Mapping
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -181,6 +183,30 @@ def build_sql(data: Mapping[str, Any]) -> str:
     return "\n".join(out)
 
 
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="python -m devtools.seed",
+        description="Render supabase/seed_data.json as supabase/seed.sql.",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="do not write; exit 1 if seed.sql is out of date with seed_data.json",
+    )
+    ns = parser.parse_args(argv)
+    rendered = build_sql(read_seed())
+    target = SEED_SQL.relative_to(ROOT)
+    if ns.check:
+        current = SEED_SQL.read_text(encoding="utf-8") if SEED_SQL.exists() else ""
+        if current != rendered:
+            print(f"{target} is out of date: run python -m devtools.seed", file=sys.stderr)
+            return 1
+        print(f"{target} is up to date")
+        return 0
+    SEED_SQL.write_text(rendered, encoding="utf-8")
+    print(f"wrote {target}")
+    return 0
+
+
 if __name__ == "__main__":
-    SEED_SQL.write_text(build_sql(read_seed()), encoding="utf-8")
-    print(f"wrote {SEED_SQL.relative_to(ROOT)}")
+    sys.exit(main())

@@ -21,6 +21,7 @@ import pytest
 from devtools.mcp_client import StdioMcpClient
 from scripts.mint_agent_jwt import mint
 from tests.helpers import CRM_SERVER, subprocess_env
+from tests.integration.gate import require
 
 pytestmark = pytest.mark.integration
 
@@ -28,8 +29,7 @@ URL = os.environ.get("CRM_IT_POSTGREST_URL", "")
 SECRET = os.environ.get("CRM_IT_JWT_SECRET", "")
 DB = os.environ.get("CRM_IT_DATABASE_URL", "")
 PSQL = shutil.which("psql")
-if not (URL and SECRET and DB and PSQL):
-    pytest.skip("needs PostgREST, Postgres and psql", allow_module_level=True)
+require(bool(URL and SECRET and DB and PSQL), "needs PostgREST, Postgres and psql")
 
 TOKEN = mint(SECRET, "hermes-ci", 3600)
 TARGET = "Gestoría Ejemplo Centro"

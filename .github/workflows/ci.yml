@@ -15,10 +15,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: python -m pip install "ruff==0.13.0" "mypy==1.18.2"
+      # The dev extra in pyproject.toml pins pytest, ruff and mypy for CI and local use.
+      - run: python -m pip install -e ".[dev]"
       - run: ruff check .
       - run: ruff format --check .
       - run: mypy
+      - name: seed.sql matches seed_data.json
+        run: python -m devtools.seed --check
 
   test:
     runs-on: ubuntu-latest
@@ -31,7 +34,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: python -m pip install "pytest==8.4.2"
+      - run: python -m pip install -e ".[dev]"
       - name: Unit tests (fake PostgREST, no network)
         run: python -m pytest -q
       - name: Smoke test
@@ -53,12 +56,14 @@ jobs:
       CRM_IT_DATABASE_URL: postgresql://postgres:ci-only-password@localhost:5432/postgres
       CRM_IT_JWT_SECRET: ci-only-jwt-secret-that-is-at-least-32-chars
       CRM_IT_POSTGREST_URL: http://localhost:3000
+      # A module whose backend is missing fails instead of being skipped.
+      CRM_IT_REQUIRED: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: python -m pip install "pytest==8.4.2"
+      - run: python -m pip install -e ".[dev]"
       - name: Apply roles, migration and synthetic seed
         run: |
           psql "$CRM_IT_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/integration/bootstrap_plain_postgres.sql
@@ -79,8 +84,26 @@ jobs:
           done
           docker logs postgrest
           exit 1
-      - name: Integration tests
-        run: python -m pytest -m integration -v
+      - name: Integration tests (no skips allowed)
+        run: |
+          set -o pipefail
+          python -m pytest -m integration -v -rs | tee pytest-integration.log
+          if grep -Eq "[0-9]+ skipped" pytest-integration.log; then
+            echo "integration tests were skipped; the job must run all of them" >&2
+            exit 1
+          fi
       - name: PostgREST logs
         if: failure()
         run: docker logs postgrest
+
+  # Secret scan of the full history. Synthetic CI/test values are allowlisted in
+  # .gitleaks.toml.
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

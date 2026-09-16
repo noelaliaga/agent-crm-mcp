@@ -14,12 +14,13 @@ import subprocess
 
 import pytest
 
+from tests.integration.gate import require
+
 pytestmark = pytest.mark.integration
 
 DB = os.environ.get("CRM_IT_DATABASE_URL", "")
 PSQL = shutil.which("psql")
-if not (DB and PSQL):
-    pytest.skip("needs CRM_IT_DATABASE_URL and psql", allow_module_level=True)
+require(bool(DB and PSQL), "needs CRM_IT_DATABASE_URL and psql")
 
 CLAIMS = json.dumps({"role": "crm_agent", "actor": "it-agent"})
 AS_AGENT = (

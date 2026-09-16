@@ -186,7 +186,10 @@ class FakePostgrest:
                 fake._dispatch(self, "DELETE")
 
         self._server = ThreadingHTTPServer((host, port), Handler)
-        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+        # A short poll interval keeps shutdown() fast (the default is 0.5 s per server).
+        self._thread = threading.Thread(
+            target=self._server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True
+        )
         self._thread.start()
         return self.url
 

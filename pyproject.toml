@@ -8,8 +8,18 @@ license = { text = "MIT" }
 authors = [{ name = "Noel Aliaga" }]
 dependencies = []
 
+# Same versions as CI (.github/workflows/ci.yml installs this extra).
 [project.optional-dependencies]
-dev = ["pytest>=8.3", "ruff>=0.6", "mypy>=1.11"]
+dev = ["pytest==8.4.2", "ruff==0.13.0", "mypy==1.18.2"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+# Nothing is packaged: the servers run as scripts. This only lets
+# `pip install -e ".[dev]"` work despite several top-level folders.
+[tool.setuptools]
+packages = []
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

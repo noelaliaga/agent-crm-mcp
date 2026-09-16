@@ -6,10 +6,27 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PY="${PYTHON:-python3}"
+
+if ! "$PY" -c 'import sys; sys.exit(sys.version_info < (3, 11))' 2>/dev/null; then
+  found="$("$PY" --version 2>&1 || echo "no $PY on PATH")"
+  echo "smoke: needs Python >= 3.11, found: $found. Set PYTHON=/path/to/python3.11+." >&2
+  exit 2
+fi
+
 WORK="$(mktemp -d)"
 FAKE_PID=""
 cleanup() {
+  local status=$?
   if [[ -n "$FAKE_PID" ]]; then kill "$FAKE_PID" 2>/dev/null || true; fi
+  if [[ "$status" != "0" ]]; then
+    # Show why a step failed before the temporary files disappear.
+    for f in "$WORK"/*.err "$WORK"/*.out; do
+      [[ -s "$f" ]] || continue
+      echo "--- $(basename "$f") (last 20 lines) ---" >&2
+      tail -n 20 "$f" | cut -c1-300 >&2
+    done
+    echo "smoke FAILED (exit $status)" >&2
+  fi
   rm -rf "$WORK"
 }
 trap cleanup EXIT
@@ -43,7 +60,7 @@ print("   ok: initialize, 10 tools, ping, controlled error without config")
 PY
 
 echo "2/4 ghl_readonly server: protocol with synthetic fixtures"
-session ghl_estado | "${clean_env[@]}" GHL_MOCK=1 "$PY" "$ROOT/servers/ghl_readonly/server.py" >"$WORK/ghl.out" 2>/dev/null
+session ghl_estado | "${clean_env[@]}" GHL_MOCK=1 "$PY" "$ROOT/servers/ghl_readonly/server.py" >"$WORK/ghl.out" 2>"$WORK/ghl.err"
 "$PY" - "$WORK/ghl.out" <<'PY'
 import json, sys
 out = [json.loads(line) for line in open(sys.argv[1], encoding="utf-8")]
@@ -54,13 +71,13 @@ PY
 
 echo "3/4 --healthcheck against the fake PostgREST"
 (cd "$ROOT" && exec "${clean_env[@]}" "$PY" -m devtools.fake_postgrest --token smoke-token-0123456789 \
-  --port-file "$WORK/url" 2>/dev/null) &
+  --port-file "$WORK/url" 2>"$WORK/fake.err") &
 FAKE_PID=$!
 for _ in $(seq 1 50); do [[ -s "$WORK/url" ]] && break; sleep 0.1; done
 [[ -s "$WORK/url" ]] || { echo "fake PostgREST did not start" >&2; exit 1; }
 "${clean_env[@]}" CRM_SUPABASE_URL="$(cat "$WORK/url")" CRM_AGENT_TOKEN=smoke-token-0123456789 \
-  "$PY" "$ROOT/servers/crm/server.py" --healthcheck 2>/dev/null | tee "$WORK/health.json" >/dev/null
-echo "   ok: $(cat "$WORK/health.json")"
+  "$PY" "$ROOT/servers/crm/server.py" --healthcheck >"$WORK/health.out" 2>"$WORK/health.err"
+echo "   ok: $(cat "$WORK/health.out")"
 
 echo "4/4 --healthcheck fails with exit 1 when the backend is down"
 kill "$FAKE_PID" 2>/dev/null || true
