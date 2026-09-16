@@ -29,6 +29,12 @@ begin
   if exists (select 1 from pg_roles where rolname = 'authenticator') then
     grant crm_agent to authenticator;
   end if;
+  -- The seed and the manual checks in docs/ run `SET ROLE crm_agent` as the migration
+  -- owner. A superuser can always do that; a non-superuser owner (Supabase's `postgres`)
+  -- needs membership. crm_agent's privileges are a subset of the owner's.
+  if not pg_has_role(current_user, 'crm_agent', 'MEMBER') then
+    execute format('grant crm_agent to %I', current_user);
+  end if;
 end
 $$;
 
