@@ -1,0 +1,51 @@
+[project]
+name = "agent-crm-mcp"
+version = "0.1.0"
+description = "Dependency-free MCP servers that let an LLM agent read and write a Postgres CRM through a field allowlist, plus the audit trail that proves what the agent did."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Noel Aliaga" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3", "ruff>=0.6", "mypy>=1.11"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-m 'not integration'"
+markers = [
+  "integration: needs a real Postgres (and PostgREST); runs in the CI integration job, see docs/running-with-postgres.md",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [".venv*", "prototype"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "BLE"]
+ignore = [
+  "SIM108", # ternaries are not always clearer
+]
+
+[tool.ruff.lint.per-file-ignores]
+# urlopen is called with URLs whose scheme is validated (http/https) at config time.
+"servers/**" = ["S310"]
+# Dev tooling: asserts are fine, the fake backend has a dummy default token, and seed.py
+# renders SQL from the repository's own JSON with quoting (no user input).
+"devtools/**" = ["S310", "S104", "S101", "S107", "S608"]
+"scripts/**" = ["S310", "S603"]
+# Integration tests build static SQL strings for psql.
+"tests/**" = ["S101", "S105", "S106", "S310", "S603", "S607", "S108", "S608"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.11"
+files = ["servers", "devtools", "scripts"]
+warn_unused_ignores = true
+warn_return_any = true
+disallow_untyped_defs = true
+no_implicit_optional = true
