@@ -116,3 +116,19 @@ def test_seed_history_has_agent_rows_and_no_service_role() -> None:
     counts = dict(rows(result.stdout))
     assert int(counts["agent"]) >= 5  # 4 field updates + 1 note
     assert counts["service"] == "0"
+
+
+def test_agent_cannot_read_valor_cents_through_the_audit_table() -> None:
+    result = psql(
+        f"begin; update public.prospectos set valor_cents = 987654 where {NORTE}; "
+        "select 'owner', count(*) from public.prospecto_cambios where campo = 'valor_cents'; "
+        + AS_AGENT.removeprefix("begin; ")
+        + "select 'agent', count(*) from public.prospecto_cambios where campo = 'valor_cents'; "
+        "select 'agent_value', count(*) from public.prospecto_cambios "
+        "where valor_despues = '987654'; rollback;"
+    )
+    assert result.returncode == 0, result.stderr
+    counts = dict(rows(result.stdout))
+    assert int(counts["owner"]) >= 1
+    assert counts["agent"] == "0"
+    assert counts["agent_value"] == "0"

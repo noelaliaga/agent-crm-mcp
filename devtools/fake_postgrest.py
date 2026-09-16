@@ -368,6 +368,10 @@ class FakePostgrest:
 
     def _filter(self, table: str, params: list[tuple[str, str]]) -> list[dict[str, Any]]:
         rows = self.tables[table]
+        if self.enforce_grants and table == "prospecto_cambios":
+            # RLS policy crm_agent_lee_cambios: no audit rows about hidden columns.
+            hidden = AGENT_HIDDEN_COLUMNS["prospectos"]
+            rows = [r for r in rows if r.get("campo") not in hidden]
         for key, value in params:
             if key in ("select", "order", "limit", "offset"):
                 continue

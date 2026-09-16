@@ -43,7 +43,7 @@ After the runtime restart described in the postmortem, the runtime registered th
 
 | Addition | Verified how |
 |---|---|
-| Restricted `crm_agent` identity (column grants, no DELETE, database-assigned note author, `actor` in the audit) | Written in `supabase/migrations/0001_crm_min.sql`. Unit tests check that the Python allowlist, the fake backend and the SQL grants are the same list. **The Postgres integration tests (`tests/integration/`) run only in CI. They were not executed where this repository was prepared, because no Postgres was available there.** |
+| Restricted `crm_agent` identity (column grants, audit rows filtered to readable columns, no DELETE, database-assigned note author, `actor` in the audit) | Written in `supabase/migrations/0001_crm_min.sql`. Unit tests check that the Python allowlist, the fake backend and the SQL grants are the same list. **The Postgres integration tests (`tests/integration/`) run only in CI. They were not executed where this repository was prepared, because no Postgres was available there.** |
 | Write modes, validation, redaction, name resolution | Unit tests against a fake PostgREST (`pytest`, Python 3.11–3.13) |
 | `--healthcheck`, `crm_salud`, alert scripts | Unit tests and `scripts/smoke.sh` against the fake PostgREST. The alert examples have not run in production |
 | Synthetic seed and offline demo | `scripts/demo_offline.py`; transcript in [media/demo-offline.txt](media/demo-offline.txt) |

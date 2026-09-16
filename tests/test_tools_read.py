@@ -171,3 +171,12 @@ def test_listings_keep_third_party_names_inside_untrusted_blocks(make_server, to
     outside = re.sub(r"<untrusted.*?</untrusted>", "", text, flags=re.S)
     assert "Demo" not in outside and "Ejemplo" not in outside
     assert "IGNORE" not in outside
+
+
+def test_cambios_hides_changes_to_columns_the_agent_cannot_read(make_server, fake) -> None:
+    row = next(p for p in fake.tables["prospectos"] if p["nombre"] == "Asesoría Demo Norte")
+    fake.apply_update(row, {"valor_cents": 987654}, "postgres", None)
+    assert any(c["campo"] == "valor_cents" for c in fake.tables["prospecto_cambios"])
+    text, is_error = call(make_server(), "crm_cambios", {"nombre": "Demo Norte", "limite": 100})
+    assert not is_error
+    assert "valor_cents" not in text and "987654" not in text

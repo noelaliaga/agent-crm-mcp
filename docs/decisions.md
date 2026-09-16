@@ -39,14 +39,14 @@ Each decision gives the context, the choice, and what it costs. The prototype re
 - `SELECT` on the read columns, but not on `valor_cents`;
 - `UPDATE` on the six allowlisted columns only;
 - `INSERT (prospecto_id, cuerpo)` on notes;
-- `SELECT` on the audit table;
+- `SELECT` on the audit table, except the rows that record changes to `valor_cents`. The trigger copies old and new values of every column, so without this RLS filter the agent could read through the audit what the column grant hides;
 - no `DELETE` anywhere, and no write access to the audit table.
 
 The note author is set by a trigger (`agente:<actor>`), so the agent cannot claim a note was written by a human. `scripts/mint_agent_jwt.py` mints HS256 tokens for local or self-hosted PostgREST.
 
 **Cost and limits.**
 - Hosted Supabase projects that use asymmetric JWT signing keys need a different token flow. That flow is **not tested** here.
-- The migration removes `anon`/`authenticated` privileges on these tables, so a human app that shares the tables must add its own grants and policies.
+- The migration removes `anon`/`authenticated` privileges on these tables and enables RLS with policies only for `crm_agent`. A human app that shares the tables must add its own grants and policies first; the SQL file says so in its header.
 
 ## 4. Resolve by name, and require a unique match
 

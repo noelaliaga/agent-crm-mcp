@@ -33,12 +33,61 @@ def test_agent_can_only_insert_note_body_and_prospect() -> None:
     assert _grant_columns("insert", "prospecto_notas") == {"prospecto_id", "cuerpo"}
 
 
+def _statements() -> list[str]:
+    code = re.sub(r"--[^\n]*", "", SQL.lower())
+    return [" ".join(part.split()) for part in code.split(";")]
+
+
+def _agent_grants() -> list[tuple[set[str], str]]:
+    """(privileges, object) for every `GRANT ... ON ... TO crm_agent` in the migration."""
+    grants = []
+    for statement in _statements():
+        match = re.fullmatch(r"grant (.+?) on (.+?) to crm_agent", statement)
+        if match:
+            privileges = re.sub(r"\([^)]*\)", "", match.group(1))
+            grants.append(({p.strip() for p in privileges.split(",")}, match.group(2)))
+    return grants
+
+
 def test_migration_never_grants_delete_or_audit_writes_to_the_agent() -> None:
-    lowered = SQL.lower()
-    assert "grant delete" not in lowered
-    assert "for delete" not in lowered
-    assert not re.search(r"grant (insert|update|all)[^;]*prospecto_cambios", lowered)
-    assert "service_role" not in re.sub(r"--[^\n]*", "", lowered)
+    grants = _agent_grants()
+    assert len(grants) >= 6, grants  # the parser must actually find the grants
+    for privileges, target in grants:
+        assert not privileges & {"delete", "truncate", "all", "all privileges"}, target
+        assert privileges <= {"select", "insert", "update", "usage", "execute"}, target
+        if "prospecto_cambios" in target:
+            assert privileges == {"select"}, target
+    policies = [s for s in _statements() if s.startswith("create policy")]
+    assert policies
+    assert all(" for delete " not in p and " for all " not in p for p in policies)
+    assert all(" for select " in p for p in policies if " on public.prospecto_cambios " in p)
+    assert "service_role" not in " ".join(_statements())
+
+
+def test_grant_parser_catches_combined_and_all_privileges() -> None:
+    for bad in (
+        "grant select, delete on public.prospectos to crm_agent",
+        "grant all on public.prospectos to crm_agent",
+    ):
+        match = re.fullmatch(r"grant (.+?) on (.+?) to crm_agent", bad)
+        assert match
+        privileges = {p.strip() for p in match.group(1).split(",")}
+        assert privileges & {"delete", "all"}
+
+
+def test_audit_rows_about_unreadable_columns_are_hidden_from_the_agent() -> None:
+    readable = _grant_columns("select", "prospectos")
+    unreadable = set(fake_postgrest.SCHEMA["prospectos"]) - readable
+    assert unreadable == {"valor_cents"}
+    policy = re.search(
+        r"create policy crm_agent_lee_cambios on public\.prospecto_cambios\s+for select to "
+        r"crm_agent using \(campo is null or campo not in \(([^)]*)\)\)",
+        SQL,
+        re.I,
+    )
+    assert policy, "the audit read policy must filter by campo"
+    hidden = {c.strip().strip("'") for c in policy.group(1).split(",")}
+    assert hidden == unreadable == set(fake_postgrest.AGENT_HIDDEN_COLUMNS["prospectos"])
 
 
 def test_patch_rejects_fields_outside_the_allowlist_before_any_request(make_server, fake):

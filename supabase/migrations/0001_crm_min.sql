@@ -13,8 +13,17 @@
 --     `prospecto_cambios` by a trigger, with the effective database role, the session
 --     user and the `actor` claim of the caller's JWT.
 --
+--   * The agent cannot read `valor_cents`, neither on `prospectos` nor through the audit
+--     rows that record its old and new values.
+--
 -- Works on plain Postgres >= 13 with PostgREST, and on Supabase (which already has the
 -- `authenticator`, `anon` and `authenticated` roles). Idempotent.
+--
+-- WARNING: do not apply this to a database whose tables are shared with another app (for
+-- example the human-facing CRM) before adding that app's grants and policies. If the
+-- tables already exist, `create table if not exists` leaves them alone, but the REVOKE
+-- below removes every privilege of `anon` and `authenticated` on them, and enabling RLS
+-- with policies only for `crm_agent` hides all rows from other non-owner roles.
 
 begin;
 
@@ -296,8 +305,12 @@ create policy crm_agent_inserta_notas on public.prospecto_notas
   for insert to crm_agent with check (autor like 'agente:%');
 
 drop policy if exists crm_agent_lee_cambios on public.prospecto_cambios;
+-- The audit trigger copies the old and new value of every changed column, including
+-- columns the agent cannot SELECT on prospectos. Those rows are hidden from the agent.
+-- The list must equal the columns left out of the SELECT grant above
+-- (tests/test_allowlist.py compares them).
 create policy crm_agent_lee_cambios on public.prospecto_cambios
-  for select to crm_agent using (true);
+  for select to crm_agent using (campo is null or campo not in ('valor_cents'));
 
 -- No DELETE grant or policy for crm_agent anywhere. No INSERT/UPDATE on prospecto_cambios.
 
