@@ -1,0 +1,22 @@
+# Hermes Agent (Nous Research, MIT) · only the mcp_servers block.
+# Merge it into your Hermes config.yaml. Replace every <PLACEHOLDER>.
+# Shape follows the upstream MCP docs (command / args / env / tools.include).
+mcp_servers:
+  crm:
+    command: "python3"
+    args: ["<ABSOLUTE_PATH_TO>/agent-crm-mcp/servers/crm/server.py"]
+    env:
+      CRM_SUPABASE_URL: "https://<PROJECT_REF>.supabase.co"
+      CRM_API_KEY: "<SUPABASE_ANON_KEY>"
+      CRM_AGENT_TOKEN: "<CRM_AGENT_JWT>"   # role=crm_agent, never service_role
+      CRM_WRITE_MODE: "dry_run"            # off | dry_run | on
+      CRM_MAX_WRITES: "10"
+    # Optional: expose only the read tools to a scheduled job's profile.
+    # tools:
+    #   include: [crm_hoy, crm_siguiente_llamada, crm_buscar, crm_pipeline, crm_salud]
+
+  ghl:
+    command: "python3"
+    args: ["<ABSOLUTE_PATH_TO>/agent-crm-mcp/servers/ghl_readonly/server.py"]
+    env:
+      GHL_MOCK: "1"                        # synthetic data; set GHL_TOKEN/GHL_LOCATION_ID instead for a real read-only integration

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd agent: run the functional healthcheck every 15 minutes and alert on failure.
+  1. Replace <ABSOLUTE_PATH_TO> and <HOME>.
+  2. Put CRM_* variables in a chmod 600 file and point CRM_ENV_FILE at it.
+  3. cp to ~/Library/LaunchAgents/ and `launchctl load` it.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.example.agent-crm-mcp.healthcheck</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string><ABSOLUTE_PATH_TO>/agent-crm-mcp/scripts/healthcheck-alert.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>CRM_ENV_FILE</key>
+    <string><HOME>/.config/agent-crm-mcp/crm.env</string>
+    <key>ALERT_WEBHOOK_URL</key>
+    <string><YOUR_ALERT_WEBHOOK_URL></string>
+  </dict>
+  <key>StartInterval</key>
+  <integer>900</integer>
+  <key>StandardErrorPath</key>
+  <string>/tmp/agent-crm-mcp-healthcheck.err</string>
+</dict>
+</plist>

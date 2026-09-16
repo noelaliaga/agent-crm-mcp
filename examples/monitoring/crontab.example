@@ -1,0 +1,5 @@
+# Functional healthcheck every 15 minutes (exit != 0 -> alert via webhook + syslog).
+*/15 * * * * CRM_ENV_FILE=$HOME/.config/agent-crm-mcp/crm.env ALERT_WEBHOOK_URL=<YOUR_ALERT_WEBHOOK_URL> /bin/bash <ABSOLUTE_PATH_TO>/agent-crm-mcp/scripts/healthcheck-alert.sh
+
+# Runtime-side check: MCP failure signatures in the agent runtime's log (every 10 minutes).
+*/10 * * * * ALERT_WEBHOOK_URL=<YOUR_ALERT_WEBHOOK_URL> /bin/bash <ABSOLUTE_PATH_TO>/agent-crm-mcp/scripts/watch-runtime-log.sh <PATH_TO_RUNTIME_LOG> 2000

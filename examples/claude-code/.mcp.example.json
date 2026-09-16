@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "crm": {
+      "type": "stdio",
+      "command": "python3",
+      "args": ["servers/crm/server.py"],
+      "env": {
+        "CRM_SUPABASE_URL": "${CRM_SUPABASE_URL}",
+        "CRM_REST_PATH": "${CRM_REST_PATH:-/rest/v1}",
+        "CRM_API_KEY": "${CRM_API_KEY:-}",
+        "CRM_AGENT_TOKEN": "${CRM_AGENT_TOKEN}",
+        "CRM_WRITE_MODE": "${CRM_WRITE_MODE:-off}"
+      }
+    },
+    "ghl-readonly": {
+      "type": "stdio",
+      "command": "python3",
+      "args": ["servers/ghl_readonly/server.py"],
+      "env": {
+        "GHL_MOCK": "1"
+      }
+    }
+  }
+}

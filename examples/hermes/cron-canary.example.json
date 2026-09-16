@@ -1,0 +1,7 @@
+{
+  "_comment": "Canary through the runtime itself: detects a runtime whose MCP session is stuck, which --healthcheck (a fresh process) cannot see. Pair it with a dead-man's switch that alerts when HEALTH_OK does not arrive.",
+  "name": "crm-mcp-canary",
+  "schedule": "0 */6 * * *",
+  "prompt": "Call the crm_salud tool exactly once. If it returns 'CRM health: OK', reply with exactly HEALTH_OK. If the tool is unavailable or returns an error, reply with HEALTH_FAIL followed by the error text. Do nothing else.",
+  "deliver": "<telegram:CHAT_ID>"
+}
