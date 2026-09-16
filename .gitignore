@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv*/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Secrets and local configuration: only .env.example is tracked
+.env
+.env.*
+!.env.example
+*.env
+.mcp.json
+config.yaml
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
