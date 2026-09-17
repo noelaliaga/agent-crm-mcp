@@ -3,6 +3,9 @@ name: ci
 on:
   push:
   pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -99,6 +102,10 @@ jobs:
   # Secret scan of the full history. Synthetic CI/test values are allowlisted in
   # .gitleaks.toml.
   secrets:
+    # gitleaks-action scans push events as a diff against the previous commit, which does
+    # not exist on the first push of a new repository. Run the full-history scan on pull
+    # requests, on a weekly schedule and on demand instead.
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
