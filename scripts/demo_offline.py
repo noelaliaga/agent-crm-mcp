@@ -3,7 +3,7 @@
 
     python scripts/demo_offline.py
 
-It replays the interview demo (read -> write refused -> dry run -> write -> audit) without
+It replays the demo scenario (read -> write refused -> dry run -> write -> audit) without
 Postgres, Docker, network or an LLM: the tool calls are scripted, so this shows the
 server's behaviour, not a model's. Database-level guarantees (column grants, trigger)
 are NOT shown here; they are covered by tests/integration/ against real Postgres.

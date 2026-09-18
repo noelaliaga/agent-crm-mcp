@@ -2,7 +2,7 @@
 
 Dependency-free MCP servers (Python standard library, JSON-RPC over stdio) that let an LLM agent read and write a Postgres CRM through a field allowlist. The repository also includes the audit trail that proves what the agent did and did not do.
 
-> **Status in one line.** The MCP server and its unit tests run and pass. The database-level guarantees (column grants, audit filter, note author) are written in SQL and covered by integration tests that **have not run yet**; they are designed, not proven, until the CI `integration` job is green. See [Honest status](#honest-status).
+> **Status in one line.** The MCP server and its unit tests run and pass. The database-level guarantees (column grants, audit filter, note author) are written in SQL and covered by integration tests that **pass in CI against real Postgres and PostgREST** (21 tests). See [Honest status](#honest-status).
 
 > **Credits up front.** The agent runtime these servers ran under is [Hermes Agent](https://github.com/NousResearch/hermes-agent) by **Nous Research** (MIT). I did not build it. This repository contains the MCP servers, the database side and the operational tooling around them.
 
@@ -16,11 +16,11 @@ A conversational agent, reached over Telegram or a CLI, has to look up and updat
   - Reads: `crm_buscar`, `crm_hoy`, `crm_pipeline`, `crm_consulta`, `crm_siguiente_llamada`.
   - Bounded writes: `crm_actualizar_estado`, `crm_programar_siguiente_paso`, `crm_apuntar_nota`.
   - Audit: `crm_cambios`. Health: `crm_salud`.
-- **`supabase/migrations/0001_crm_min.sql`**: a minimal schema with a restricted `crm_agent` role, column-level grants that repeat the allowlist, and a trigger that records the role and actor of every change. Not yet applied to a real database (see the status note above).
+- **`supabase/migrations/0001_crm_min.sql`**: a minimal schema with a restricted `crm_agent` role, column-level grants that repeat the allowlist, and a trigger that records the role and actor of every change. Applied to a real Postgres in every CI run by the `integration` job.
 - **`supabase/seed_data.json`**: synthetic seed data: 32 invented firms, `example.com` addresses, phone numbers from the Ofcom drama range, and one planted prompt-injection string.
 - **Tests:**
   - unit tests against a fake PostgREST (`pytest`);
-  - Postgres integration tests for the database guarantees, written for a CI job whose first run is still pending;
+  - Postgres integration tests for the database guarantees, run in CI against real Postgres and PostgREST;
   - a smoke script;
   - an offline demo.
 - **Monitoring:** `--healthcheck`, plus launchd and cron alert examples and a runtime-log watcher. These came out of a [20-day silent outage](docs/postmortem-mcp-parked.md).
@@ -46,7 +46,7 @@ Each safety layer holds even if the one above it fails:
 
 1. **Tool contract.** Only the allowlisted fields can be written, and there are no deletes. A prospect is resolved by name, and the match must be unique: the server never guesses.
 2. **Write mode.** `CRM_WRITE_MODE=off|dry_run|on` defaults to `off`, and each process has a write budget (`CRM_MAX_WRITES`). `dry_run` returns the diff without writing.
-3. **Database** (designed; the integration tests that check it have not run yet). The agent authenticates as `crm_agent` and never as `service_role`. Column grants repeat the allowlist, so that a server bug still cannot write other columns. The agent cannot delete, cannot write the audit table, cannot read audit rows about columns it is not allowed to see, and cannot choose a note's author.
+3. **Database** (checked in CI by the integration tests against real Postgres). The agent authenticates as `crm_agent` and never as `service_role`. Column grants repeat the allowlist, so that a server bug still cannot write other columns. The agent cannot delete, cannot write the audit table, cannot read audit rows about columns it is not allowed to see, and cannot choose a note's author.
 4. **Audit.** A trigger writes one row per changed field, with the effective role, the session user and the `actor` claim from the JWT.
 
 More detail: [docs/architecture.md](docs/architecture.md) · [docs/decisions.md](docs/decisions.md).
@@ -118,7 +118,7 @@ What this server does:
   - writes are `off` by default;
   - the write budget is small;
   - no deletes exist;
-  - only six columns are writable: the server refuses the rest, and the migration's column grants are designed to refuse them again (integration tests pending);
+  - only six columns are writable: the server refuses the rest, and the migration's column grants refuse them again (checked by the integration tests);
   - name resolution refuses ambiguous targets;
   - every change is audited with the agent's identity.
 
@@ -144,7 +144,7 @@ The prototype (`prototype/crm_server_v0.py`) ran against a real CRM in August 20
 | The same hand-written server pattern works under different MCP clients | 3 clients: Hermes Agent, OpenClaw, Claude Code. The CRM server itself was used only from Hermes |
 
 **Not demonstrated in real use:**
-- **Status or next-step changes by the agent:** 0 calls. In this repository these write paths are covered only by unit tests against the fake backend. The CI integration tests are written for them but have not run yet (see the next list).
+- **Status or next-step changes by the agent:** 0 calls. In this repository these write paths are covered by unit tests against the fake backend and by the CI integration tests against real Postgres; they have not been exercised by a live agent.
 
 **Not sustained:**
 - Agent use of the CRM: 2 days.
@@ -155,8 +155,8 @@ The prototype (`prototype/crm_server_v0.py`) ran against a real CRM in August 20
 
 **What this public version adds, and how far it is verified:**
 - The restricted identity, validation, write modes, healthcheck and structured logging are new.
-- The unit tests, `ruff` and `mypy` pass locally on Python 3.11 to 3.14, and `scripts/smoke.sh` passes. CI (lint, test matrix, secret scan) is configured but has not run yet, because the repository has not been pushed.
-- **The Postgres integration tests (`tests/integration/`) have not been executed yet.** No Postgres, Docker or Supabase CLI was available where this repository was prepared. They run in the CI `integration` job, so until that job is green, treat the database-level guarantees as designed and cross-checked against the grant text, not as proven.
+- The unit tests, `ruff` and `mypy` pass locally on Python 3.11 to 3.14, and `scripts/smoke.sh` passes. CI runs lint, the test matrix on Python 3.11 to 3.13 (122 unit tests passed, 2 skipped) and a full-history secret scan.
+- **The Postgres integration tests (`tests/integration/`) pass in CI:** 21 tests against Postgres 16 and PostgREST 12.2.3, with skips treated as failures. They prove the column grants, the audit filter and the database-assigned note author on a fresh database with synthetic data. They do not prove behaviour on the original Supabase project.
 
 ## Limitations
 
